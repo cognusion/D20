@@ -29,15 +29,41 @@ ggET5DKn84S8Ht4V2S9r
 -x&!sfii0$wWAH!Z5B5K
 ```
 
+Can also be used to generate keyblocks:
+
+```bash
+d20 --count 1 --length 741 --keyblock
+PdbcbO8kBT1reE0OF3Ku4xrM1X05BNLqUpZ4F5vJ1Db/JyrYBHKsbxL96irdjtGPP
+DzFtrsN2DCw53i9NXCmCghg0w2Z42zn6gBZxlyNmO86n3V1eIqAV8srR63O8lfK6P
+VkfKAuCXkWepLzbf9a/8v9hknNBET2yNK2h4OvW2i5P1JL7cYy8nA1MRKCOJUI8g0
+nNaAUFx3dUgmyxP+yJTphIUh4STiFbcbaBCY7xlDjty/lzZF3VUVHyD7Ej5djV7ne
+Cb1AHk2OVO7N6zw2o2aMR9CCq1Re6cMongodK/pmMsjur5eUdpQbKyYHkUnFUxUu7
+4LKN7E4vhV6YAn9kCt6SIPmIS78KjNmzUiwqrMvublJFAiCcdxwEuEaG9+Id5Lil/
+M/Na4pNUgnogC2AZXsQSVSG5s2h4cu4x5+B7CxoeplF1pHNcyb3TBWw4mHfiHpv7V
+RijLh8VRkcjgqZ3cv090VpoLcXnhG1rzE5XYEi0oedj2y7Xfr6ymRJ3c00OW67VHR
+33bKf0kq0gYc0P1Ys3Q3zyswyTE3YwYeGZcxeblnXVis8SZnTnacEPV1XEL1AR/NK
+LP7Pwx1McR+1gdg50yB6ey+qRWCg+rXNztsIdwxvPdzrTYrR8dtq1l1206FIcIgPD
+IwmEAWufoGXTletnDuN15jxX9/vVNBfxxWwWQzio2mDUBf0dJ/qukWxz1a9IU78IP
+vSHdm1snzJ7H6DXCa48zj+C+BR4MbIcokvi4KbKnrYA1NxrYde3FbysQrA4100T9q
+4yHlriE99gnf4ts0WfwORQiFGlM3SItPjVncI9iZ6BW7S6CzGai5AjeJ/vBpovCHT
+uTQjfuE+bmJUu7LEsT1A1651cSEpIAIloveChi8LRvkqIbLD30Ia5dI6PByG/1gM+
+6VKxC/ITZ3LvnvKQp8FKYSWm7FBGPGAXLsqOVMs9gX
+```
+
 All of those options are configurable.
 
 ```bash
- d20 --help
-Usage of d20:
+Usage of ./d20:
+  -base64
+    	Base64 encode the output
+  -block
+    	Block the output to 65 character lines
   -chars string
-    	Characters to use (all alphanumeric alphanumeric-nosim numeric alphabet binary hexadecimal) (default "all")
+    	Characters to use (all bytes alphanumeric alphanumeric-nosim numeric alphabet binary hexadecimal) (default "all")
   -count int
     	Number of strings (default 20)
+  -keyblock
+    	Shortcut to --char bytes --base64 --block
   -length int
     	Length of string (default 20)
   -mangle string
