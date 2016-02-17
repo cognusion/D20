@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"crypto/rand"
+	"encoding/base64"
 	"flag"
 	"fmt"
 	"strings"
@@ -9,11 +11,10 @@ import (
 
 var CharSet string
 
-
 func getChars(charSet string) string {
 	switch charSet {
 	case "list":
-		return "all alphanumeric alphanumeric-nosim numeric alphabet binary hexadecimal"
+		return "all bytes alphanumeric alphanumeric-nosim numeric alphabet binary hexadecimal"
 
 	case "numeric":
 		return "0123456789"
@@ -55,6 +56,26 @@ func randString(size int) string {
 	return string(bytes)
 }
 
+func randBytes(size int) []byte {
+	bytes := make([]byte, size)
+
+	rand.Read(bytes)
+	return bytes
+}
+
+func blockstring(s string, n int) string {
+	var buffer bytes.Buffer
+	var n_1 = n - 1
+	var l_1 = len(s) - 1
+	for i, rune := range s {
+		buffer.WriteRune(rune)
+		if i%n == n_1 && i != l_1 {
+			buffer.WriteString("\n")
+		}
+	}
+	return buffer.String()
+}
+
 func main() {
 
 	var (
@@ -62,12 +83,16 @@ func main() {
 		stringlength int
 		stringcount  int
 		mangle       string
+		b64          bool
+		block        bool
 	)
 
 	flag.StringVar(&charset, "chars", "all", "Characters to use ("+getChars("list")+")")
 	flag.IntVar(&stringlength, "length", 20, "Length of string")
 	flag.IntVar(&stringcount, "count", 20, "Number of strings")
 	flag.StringVar(&mangle, "mangle", "", "Mangle the output (Decreases cardinality) (UC LC)")
+	flag.BoolVar(&b64, "base64", false, "Base64 encode the output")
+	flag.BoolVar(&block, "block", false, "Block the output to 65 character lines")
 	flag.Parse()
 
 	// Sanity
@@ -78,19 +103,48 @@ func main() {
 	// Yes, globals suck, and there are "better" ways to do this.
 	// No, in this instance it doesn't matter. Short-lived program, and it spares
 	//   us a ton of computation by doing this.
-	CharSet = getChars(charset)
+	if charset != "bytes" {
+		CharSet = getChars(charset)
+	}
 
 	// Print All The Strings!
 	for i := 0; i < stringcount; i++ {
-		s := randString(stringlength)
-		
-		switch strings.ToLower(mangle) {
-		case "uc":
-			s = strings.ToUpper(s)
-		case "lc":
-			s = strings.ToLower(s)
+
+		var s string
+		if charset != "bytes" {
+			// Strings!
+			s = randString(stringlength)
+
+			switch strings.ToLower(mangle) {
+			case "uc":
+				s = strings.ToUpper(s)
+			case "lc":
+				s = strings.ToLower(s)
+			}
+
+			if b64 {
+				s = base64.RawStdEncoding.EncodeToString([]byte(s))
+			}
+
+			if block {
+				s = blockstring(s, 65)
+			}
+		} else {
+			// Bytes!
+
+			b := randBytes(stringlength)
+
+			if b64 {
+				s = base64.RawStdEncoding.EncodeToString(b)
+			} else {
+				s = string(b)
+			}
+
+			if block {
+				s = blockstring(s, 65)
+			}
 		}
-		
+
 		fmt.Println(s)
 	}
 }
