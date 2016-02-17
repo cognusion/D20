@@ -85,6 +85,7 @@ func main() {
 		mangle       string
 		b64          bool
 		block        bool
+		keyblock     bool
 	)
 
 	flag.StringVar(&charset, "chars", "all", "Characters to use ("+getChars("list")+")")
@@ -93,11 +94,17 @@ func main() {
 	flag.StringVar(&mangle, "mangle", "", "Mangle the output (Decreases cardinality) (UC LC)")
 	flag.BoolVar(&b64, "base64", false, "Base64 encode the output")
 	flag.BoolVar(&block, "block", false, "Block the output to 65 character lines")
+	flag.BoolVar(&keyblock, "keyblock", false, "Shortcut to --char bytes --base64 --block")
 	flag.Parse()
 
 	// Sanity
 	if charset == "list" {
 		charset = "all"
+	}
+	if keyblock {
+		charset = "bytes"
+		b64 = true
+		block = true
 	}
 
 	// Yes, globals suck, and there are "better" ways to do this.
