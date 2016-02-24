@@ -64,6 +64,8 @@ Usage of ./d20:
     	Characters to use (all bytes alphanumeric alphanumeric-nosim numeric alphabet binary hexadecimal) (default "all")
   -count int
     	Number of strings (default 20)
+  -custom string
+    	A list of characters you want to use in lieu of the ones we've offered (repeat for prevalence)
   -keyblock
     	Shortcut to '--char bytes --base64 --block --blocksize 65' (HINT: --length 741, perhaps?)
   -length int

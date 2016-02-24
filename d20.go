@@ -20,7 +20,7 @@ func init() {
 func getChars(charSet string) string {
 	switch charSet {
 	case "list":
-		return "all bytes alphanumeric alphanumeric-nosim numeric alphabet binary hexadecimal"
+		return "all custom bytes alphanumeric alphanumeric-nosim numeric alphabet binary hexadecimal"
 
 	case "numeric":
 		return "0123456789"
@@ -106,6 +106,7 @@ func main() {
 		blocksize    int
 		unique       bool
 		separator    string
+		custom       string
 	)
 
 	flag.StringVar(&charset, "chars", "all", "Characters to use ("+getChars("list")+")")
@@ -119,6 +120,7 @@ func main() {
 	flag.IntVar(&blocksize, "blocksize", 65, "Slight misnomer: if --block is used, sets the line length to int")
 	flag.BoolVar(&unique, "unique", false, "Ensure generated strings are unique. Lame")
 	flag.StringVar(&separator, "separator", "\n", "What character or string should each value be separated with?")
+	flag.StringVar(&custom, "custom", "", "A list of characters you want to use in lieu of the ones we've offered (repeat for prevalence)")
 	flag.Parse()
 
 	// Sanity
@@ -135,7 +137,7 @@ func main() {
 		charset = "numeric"
 		stringlength = pin
 	}
-	
+
 	// String Quoting Madness
 	if separator == "\n" {
 		separator = `"\n"`
@@ -151,7 +153,9 @@ func main() {
 	// Yes, globals suck, and there are "better" ways to do this.
 	// No, in this instance it doesn't matter. Short-lived program, and it spares
 	//   us a ton of computation by doing this.
-	if charset != "bytes" {
+	if custom != "" {
+		CharSet = custom
+	} else if charset != "bytes" {
 		CharSet = getChars(charset)
 	}
 
