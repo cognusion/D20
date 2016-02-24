@@ -6,10 +6,16 @@ import (
 	"encoding/base64"
 	"flag"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
 var CharSet string
+var Uniq map[string]bool
+
+func init() {
+	Uniq = make(map[string]bool)
+}
 
 func getChars(charSet string) string {
 	switch charSet {
@@ -45,7 +51,6 @@ func getChars(charSet string) string {
 // Return a randomish string of the specified size,
 // using the global CharSet
 func randString(size int) string {
-
 	bytes := make([]byte, size)
 	setLen := byte(len(CharSet))
 
@@ -76,6 +81,17 @@ func blockstring(s string, n int) string {
 	return buffer.String()
 }
 
+func isUnique(str string) bool {
+	if _, ok := Uniq[str]; ok {
+		// exists
+		return false
+	} else {
+		// doesn't exist
+		Uniq[str] = true
+		return true
+	}
+}
+
 func main() {
 
 	var (
@@ -86,15 +102,23 @@ func main() {
 		b64          bool
 		block        bool
 		keyblock     bool
+		pin          int
+		blocksize    int
+		unique       bool
+		separator    string
 	)
 
 	flag.StringVar(&charset, "chars", "all", "Characters to use ("+getChars("list")+")")
 	flag.IntVar(&stringlength, "length", 20, "Length of string")
 	flag.IntVar(&stringcount, "count", 20, "Number of strings")
-	flag.StringVar(&mangle, "mangle", "", "Mangle the output (Decreases cardinality) (UC LC)")
+	flag.StringVar(&mangle, "mangle", "", "Mangle the output (WARN: Decreases cardinality, should not be used with --base64) (UC LC)")
 	flag.BoolVar(&b64, "base64", false, "Base64 encode the output")
 	flag.BoolVar(&block, "block", false, "Block the output to 65 character lines")
-	flag.BoolVar(&keyblock, "keyblock", false, "Shortcut to --char bytes --base64 --block")
+	flag.BoolVar(&keyblock, "keyblock", false, "Shortcut to '--char bytes --base64 --block --blocksize 65' (HINT: --length 741, perhaps?)")
+	flag.IntVar(&pin, "pin", 0, "Shortcut to '--char numeric --length int'")
+	flag.IntVar(&blocksize, "blocksize", 65, "Slight misnomer: if --block is used, sets the line length to int")
+	flag.BoolVar(&unique, "unique", false, "Ensure generated strings are unique. Lame")
+	flag.StringVar(&separator, "separator", "\n", "What character or string should each value be separated with?")
 	flag.Parse()
 
 	// Sanity
@@ -105,6 +129,23 @@ func main() {
 		charset = "bytes"
 		b64 = true
 		block = true
+		blocksize = 65
+	}
+	if pin > 0 {
+		charset = "numeric"
+		stringlength = pin
+	}
+	
+	// String Quoting Madness
+	if separator == "\n" {
+		separator = `"\n"`
+	} else {
+		separator = `"` + separator + `"`
+	}
+	separator, err := strconv.Unquote(separator)
+	if err != nil {
+		fmt.Printf("Separator error: %s\n", err.Error())
+		return
 	}
 
 	// Yes, globals suck, and there are "better" ways to do this.
@@ -122,23 +163,12 @@ func main() {
 			// Strings!
 			s = randString(stringlength)
 
-			switch strings.ToLower(mangle) {
-			case "uc":
-				s = strings.ToUpper(s)
-			case "lc":
-				s = strings.ToLower(s)
-			}
-
 			if b64 {
 				s = base64.RawStdEncoding.EncodeToString([]byte(s))
 			}
 
-			if block {
-				s = blockstring(s, 65)
-			}
 		} else {
 			// Bytes!
-
 			b := randBytes(stringlength)
 
 			if b64 {
@@ -146,12 +176,24 @@ func main() {
 			} else {
 				s = string(b)
 			}
+		}
+		// POST: s is a populated string of something
 
-			if block {
-				s = blockstring(s, 65)
-			}
+		switch strings.ToLower(mangle) {
+		case "uc":
+			s = strings.ToUpper(s)
+		case "lc":
+			s = strings.ToLower(s)
 		}
 
-		fmt.Println(s)
+		if block {
+			s = blockstring(s, blocksize)
+		}
+
+		if unique && !isUnique(s) {
+			continue
+		}
+
+		fmt.Printf("%s%s", s, separator)
 	}
 }

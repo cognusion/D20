@@ -58,14 +58,22 @@ Usage of ./d20:
     	Base64 encode the output
   -block
     	Block the output to 65 character lines
+  -blocksize int
+    	Slight misnomer: if --block is used, sets the line length to int (default 65)
   -chars string
     	Characters to use (all bytes alphanumeric alphanumeric-nosim numeric alphabet binary hexadecimal) (default "all")
   -count int
     	Number of strings (default 20)
   -keyblock
-    	Shortcut to --char bytes --base64 --block
+    	Shortcut to '--char bytes --base64 --block --blocksize 65' (HINT: --length 741, perhaps?)
   -length int
     	Length of string (default 20)
   -mangle string
-    	Mangle the output (Decreases cardinality) (UC LC)
+    	Mangle the output (WARN: Decreases cardinality, should not be used with --base64) (UC LC)
+  -pin int
+    	Shortcut to '--char numeric --length int'
+  -separator string
+    	What character or string should each value be separated with? (default "\n")
+  -unique
+    	Ensure generated strings are unique. Lame
 ```
