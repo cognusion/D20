@@ -10,18 +10,10 @@ import (
 	"strings"
 )
 
-var CharSet string
-var Uniq map[string]bool
-
-func init() {
-	Uniq = make(map[string]bool)
-}
-
 func getChars(charSet string) string {
 	switch charSet {
 	case "list":
-		return "all custom bytes alphanumeric alphanumeric-nosim numeric alphabet binary hexadecimal"
-
+		return "all bytes alphanumeric alphanumeric-nosim numeric alphabet binary hexadecimal"
 	case "numeric":
 		return "0123456789"
 	case "bin":
@@ -50,13 +42,13 @@ func getChars(charSet string) string {
 
 // Return a randomish string of the specified size,
 // using the global CharSet
-func randString(size int) string {
+func randString(size int, charset string) string {
 	bytes := make([]byte, size)
-	setLen := byte(len(CharSet))
+	setLen := byte(len(charset))
 
 	rand.Read(bytes)
 	for k, v := range bytes {
-		bytes[k] = CharSet[v%setLen]
+		bytes[k] = charset[v%setLen]
 	}
 	return string(bytes)
 }
@@ -70,26 +62,28 @@ func randBytes(size int) []byte {
 
 func blockstring(s string, n int) string {
 	var buffer bytes.Buffer
-	var n_1 = n - 1
-	var l_1 = len(s) - 1
+	var n1 = n - 1
+	var l1 = len(s) - 1
 	for i, rune := range s {
 		buffer.WriteRune(rune)
-		if i%n == n_1 && i != l_1 {
+		if i%n == n1 && i != l1 {
 			buffer.WriteString("\n")
 		}
 	}
 	return buffer.String()
 }
 
-func isUnique(str string) bool {
-	if _, ok := Uniq[str]; ok {
+// Unique is a simple deduplicating cache
+type Unique map[string]bool
+
+func (u Unique) isUnique(str string) bool {
+	if _, ok := u[str]; ok {
 		// exists
 		return false
-	} else {
-		// doesn't exist
-		Uniq[str] = true
-		return true
 	}
+	// doesn't exist
+	u[str] = true
+	return true
 }
 
 func main() {
@@ -107,6 +101,9 @@ func main() {
 		unique       bool
 		separator    string
 		custom       string
+
+		chars string
+		uniq  Unique = make(Unique)
 	)
 
 	flag.StringVar(&charset, "chars", "all", "Characters to use ("+getChars("list")+")")
@@ -120,7 +117,7 @@ func main() {
 	flag.IntVar(&blocksize, "blocksize", 65, "Slight misnomer: if --block is used, sets the line length to int")
 	flag.BoolVar(&unique, "unique", false, "Ensure generated strings are unique. Lame")
 	flag.StringVar(&separator, "separator", "\n", "What character or string should each value be separated with?")
-	flag.StringVar(&custom, "custom", "", "A list of characters you want to use in lieu of the ones we've offered (repeat for prevalence)")
+	flag.StringVar(&custom, "custom", "", "A list of characters you want to use in lieu of '--chars' (repeat for prevalence)")
 	flag.Parse()
 
 	// Sanity
@@ -154,9 +151,9 @@ func main() {
 	// No, in this instance it doesn't matter. Short-lived program, and it spares
 	//   us a ton of computation by doing this.
 	if custom != "" {
-		CharSet = custom
+		chars = custom
 	} else if charset != "bytes" {
-		CharSet = getChars(charset)
+		chars = getChars(charset)
 	}
 
 	// Print All The Strings!
@@ -165,10 +162,10 @@ func main() {
 		var s string
 		if charset != "bytes" {
 			// Strings!
-			s = randString(stringlength)
+			s = randString(stringlength, chars)
 
 			if b64 {
-				s = base64.RawStdEncoding.EncodeToString([]byte(s))
+				s = base64.StdEncoding.EncodeToString([]byte(s))
 			}
 
 		} else {
@@ -176,7 +173,7 @@ func main() {
 			b := randBytes(stringlength)
 
 			if b64 {
-				s = base64.RawStdEncoding.EncodeToString(b)
+				s = base64.StdEncoding.EncodeToString(b)
 			} else {
 				s = string(b)
 			}
@@ -194,7 +191,7 @@ func main() {
 			s = blockstring(s, blocksize)
 		}
 
-		if unique && !isUnique(s) {
+		if unique && !uniq.isUnique(s) {
 			continue
 		}
 

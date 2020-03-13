@@ -65,7 +65,7 @@ Usage of ./d20:
   -count int
     	Number of strings (default 20)
   -custom string
-    	A list of characters you want to use in lieu of the ones we've offered (repeat for prevalence)
+    	A list of characters you want to use in lieu of '--chars' (repeat for prevalence)
   -keyblock
     	Shortcut to '--char bytes --base64 --block --blocksize 65' (HINT: --length 741, perhaps?)
   -length int
@@ -77,5 +77,5 @@ Usage of ./d20:
   -separator string
     	What character or string should each value be separated with? (default "\n")
   -unique
-    	Ensure generated strings are unique. Lame
+    	Ensure generated strings are unique
 ```
