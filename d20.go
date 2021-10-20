@@ -1,11 +1,14 @@
 package main
 
 import (
+	u "github.com/cognusion/go-unique"
+
 	"bytes"
 	"crypto/rand"
 	"encoding/base64"
 	"flag"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 )
@@ -73,17 +76,48 @@ func blockstring(s string, n int) string {
 	return buffer.String()
 }
 
-// Unique is a simple deduplicating cache
-type Unique map[string]bool
+type generateConfig struct {
+	chars     string
+	length    int
+	blocksize int
+	b64       bool
+	mangle    string
+}
 
-func (u Unique) isUnique(str string) bool {
-	if _, ok := u[str]; ok {
-		// exists
-		return false
+func generateString(conf generateConfig) string {
+	var s string
+	if conf.chars != "" {
+		// Strings!
+		s = randString(conf.length, conf.chars)
+
+		if conf.b64 {
+			s = base64.StdEncoding.EncodeToString([]byte(s))
+		}
+
+	} else {
+		// Bytes!
+		b := randBytes(conf.length)
+
+		if conf.b64 {
+			s = base64.StdEncoding.EncodeToString(b)
+		} else {
+			s = string(b)
+		}
 	}
-	// doesn't exist
-	u[str] = true
-	return true
+	// POST: s is a populated string of something
+
+	switch strings.ToLower(conf.mangle) {
+	case "uc":
+		s = strings.ToUpper(s)
+	case "lc":
+		s = strings.ToLower(s)
+	}
+
+	if conf.blocksize > 0 {
+		s = blockstring(s, conf.blocksize)
+	}
+
+	return s
 }
 
 func main() {
@@ -103,7 +137,7 @@ func main() {
 		custom       string
 
 		chars string
-		uniq  Unique = make(Unique)
+		uniq  = u.New()
 	)
 
 	flag.StringVar(&charset, "chars", "all", "Characters to use ("+getChars("list")+")")
@@ -115,12 +149,17 @@ func main() {
 	flag.BoolVar(&keyblock, "keyblock", false, "Shortcut to '--char bytes --base64 --block --blocksize 65' (HINT: --length 741, perhaps?)")
 	flag.IntVar(&pin, "pin", 0, "Shortcut to '--char numeric --length int'")
 	flag.IntVar(&blocksize, "blocksize", 65, "Slight misnomer: if --block is used, sets the line length to int")
-	flag.BoolVar(&unique, "unique", false, "Ensure generated strings are unique. Lame")
+	flag.BoolVar(&unique, "unique", false, "Ensure generated strings are unique. Lame. Also may result in < count number of returned results")
 	flag.StringVar(&separator, "separator", "\n", "What character or string should each value be separated with?")
 	flag.StringVar(&custom, "custom", "", "A list of characters you want to use in lieu of '--chars' (repeat for prevalence)")
 	flag.Parse()
 
 	// Sanity
+	if stringcount > 10000 {
+		fmt.Printf("Requested count of %d is too damn high!\n", stringcount)
+		return
+	}
+
 	if charset == "list" {
 		charset = "all"
 	}
@@ -156,43 +195,59 @@ func main() {
 		chars = getChars(charset)
 	}
 
+	if !block {
+		// Safety, before calling generateString
+		blocksize = 0
+	}
+
+	perms := math.Pow(float64(len(chars)), float64(stringlength))
+	if float64(stringcount) >= perms {
+		fmt.Printf("**WARNING** Desired number of %d is >= the possible permutations (%.2f) given the characters and length requested!\n", stringcount, perms)
+		if unique {
+			fmt.Printf("\tSetting the count from %d to %d because uniqueness is required\n", stringcount, int(perms))
+			stringcount = int(perms)
+		}
+	}
+
+	stringChan := make(chan string, 100)
+	configChan := make(chan generateConfig, stringcount)
+
 	// Print All The Strings!
+
+	// Build the config
+	gConfig := generateConfig{
+		chars:     chars,
+		length:    stringlength,
+		blocksize: blocksize,
+		b64:       b64,
+		mangle:    mangle,
+	}
+
+	// Spawn off the workers
+	go func() {
+		for gc := range configChan {
+			go func(gc generateConfig) {
+				s := generateString(gc)
+				if unique && !uniq.IsUnique(s) {
+					configChan <- gc // do it again
+					return
+				}
+				stringChan <- s
+			}(gc)
+		}
+	}()
+
+	// queue the work
 	for i := 0; i < stringcount; i++ {
+		configChan <- gConfig
+	}
 
-		var s string
-		if charset != "bytes" {
-			// Strings!
-			s = randString(stringlength, chars)
-
-			if b64 {
-				s = base64.StdEncoding.EncodeToString([]byte(s))
-			}
-
-		} else {
-			// Bytes!
-			b := randBytes(stringlength)
-
-			if b64 {
-				s = base64.StdEncoding.EncodeToString(b)
-			} else {
-				s = string(b)
-			}
-		}
-		// POST: s is a populated string of something
-
-		switch strings.ToLower(mangle) {
-		case "uc":
-			s = strings.ToUpper(s)
-		case "lc":
-			s = strings.ToLower(s)
-		}
-
-		if block {
-			s = blockstring(s, blocksize)
-		}
-
-		if unique && !uniq.isUnique(s) {
-			continue
+	var c int
+	for s := range stringChan {
+		c++
+		if c >= stringcount {
+			close(configChan)
+			close(stringChan)
 		}
 
 		fmt.Printf("%s%s", s, separator)
